@@ -1,21 +1,47 @@
 package main
 
 import (
-  "fmt"
+	"context"
+	"os"
+	"os/signal"
+	"syscall"
+	"time"
+
+	"wildberriesapi/internal/api"
+	"wildberriesapi/internal/collector"
+	"wildberriesapi/internal/config"
+	"wildberriesapi/internal/logger"
+	"wildberriesapi/internal/publisher"
 )
 
-//TIP <p>To run your code, right-click the code and select <b>Run</b>.</p> <p>Alternatively, click
-// the <icon src="AllIcons.Actions.Execute"/> icon in the gutter and select the <b>Run</b> menu item from here.</p>
-
 func main() {
-  //TIP <p>Press <shortcut actionId="ShowIntentionActions"/> when your caret is at the underlined text
-  // to see how GoLand suggests fixing the warning.</p><p>Alternatively, if available, click the lightbulb to view possible fixes.</p>
-  s := "gopher"
-  fmt.Printf("Hello and welcome, %s!\n", s)
+	cfg := config.Load()
+	log := logger.New(cfg.LogLevel)
+	log.Info().Msg("starting wb-data-parser service")
 
-  for i := 1; i <= 5; i++ {
-	//TIP <p>To start your debugging session, right-click your code in the editor and select the Debug option.</p> <p>We have set one <icon src="AllIcons.Debugger.Db_set_breakpoint"/> breakpoint
-	// for you, but you can always add more by pressing <shortcut actionId="ToggleLineBreakpoint"/>.</p>
-	fmt.Println("i =", 100/i)
-  }
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	// create components
+	wbClient := api.NewWBClient(cfg)
+
+	pub, err := publisher.NewKafkaPublisher(cfg)
+	if err != nil {
+		log.Fatal().Err(err).Msg("failed to create kafka publisher")
+	}
+
+	collector := collector.NewCollector(cfg, wbClient, pub, log)
+
+	go collector.Schedule(ctx, cfg.PollInterval)
+
+	// graceful shutdown
+	sig := make(chan os.Signal, 1)
+	signal.Notify(sig, syscall.SIGINT, syscall.SIGTERM)
+	<-sig
+
+	log.Info().Msg("shutdown signal received")
+	cancel()
+	time.Sleep(2 * time.Second)
+	_ = pub.Close()
+	log.Info().Msg("service stopped")
 }
