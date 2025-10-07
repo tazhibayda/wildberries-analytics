@@ -5,43 +5,41 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"os/signal"
+	"syscall"
 	"time"
 
 	"github.com/rs/zerolog"
-	_ "github.com/rs/zerolog/log"
 	"github.com/segmentio/kafka-go"
 	"wildberriesapi/internal/config"
 )
 
+// Publisher — интерфейс для тестируемости и гибкости
 type Publisher interface {
-	Publish(ctx context.Context, key []byte, v any) error
+	Publish(ctx context.Context, topic string, key []byte, v any) error
 	Close() error
 }
 
+// KafkaPublisher — реализация Publisher для Kafka
 type KafkaPublisher struct {
-	writer *kafka.Writer
-	logger zerolog.Logger
-	topic  string
+	writers map[string]*kafka.Writer
+	logger  zerolog.Logger
+	brokers []string
 }
 
-// Создаём Kafka Publisher с проверкой подключения и логированием
+// NewKafkaPublisher — инициализация Kafka Publisher
 func NewKafkaPublisher(cfg config.Config) (Publisher, error) {
 	if len(cfg.Kafka.Brokers) == 0 {
-		return nil, fmt.Errorf("no Kafka brokers provided in config")
+		return nil, fmt.Errorf("❌ no Kafka brokers provided in config")
 	}
 
-	// Логгер в stdout
 	logger := zerolog.New(os.Stdout).With().Timestamp().Logger()
+	logger.Info().Msgf("🔌 Connecting to Kafka brokers: %v", cfg.Kafka.Brokers)
 
-	brokerAddr := cfg.Kafka.Brokers[0]
-	topic := cfg.Kafka.Topic
-
-	logger.Info().Msgf("Connecting to Kafka broker: %s", brokerAddr)
-
-	// Проверим соединение перед созданием writer
-	conn, err := kafka.Dial("tcp", brokerAddr)
+	// Проверяем соединение с первым брокером
+	conn, err := kafka.Dial("tcp", cfg.Kafka.Brokers[0])
 	if err != nil {
-		return nil, fmt.Errorf("failed to connect to Kafka broker %s: %w", brokerAddr, err)
+		return nil, fmt.Errorf("failed to connect to Kafka broker %s: %w", cfg.Kafka.Brokers[0], err)
 	}
 	defer conn.Close()
 
@@ -49,37 +47,68 @@ func NewKafkaPublisher(cfg config.Config) (Publisher, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to get Kafka controller: %w", err)
 	}
-	logger.Info().Msgf("Connected to Kafka controller at %s:%d", controller.Host, controller.Port)
+	logger.Info().Msgf("✅ Connected to Kafka controller at %s:%d", controller.Host, controller.Port)
 
+	p := &KafkaPublisher{
+		writers: make(map[string]*kafka.Writer),
+		logger:  logger,
+		brokers: cfg.Kafka.Brokers,
+	}
+
+	// Graceful shutdown при SIGTERM / SIGINT
+	go func() {
+		sigCh := make(chan os.Signal, 1)
+		signal.Notify(sigCh, syscall.SIGTERM, syscall.SIGINT)
+		<-sigCh
+		logger.Info().Msg("🧹 Received shutdown signal, closing Kafka writers...")
+		p.Close()
+		os.Exit(0)
+	}()
+
+	// Проверочный тест
+	//testWriter := &kafka.Writer{
+	//	Addr:     kafka.TCP(cfg.Kafka.Brokers...),
+	//	Topic:    "wb.raw",
+	//	Balancer: &kafka.LeastBytes{},
+	//}
+	//err = testWriter.WriteMessages(context.Background(), kafka.Message{
+	//	Value: []byte(`{"status":"ok","message":"Kafka test message"}`),
+	//})
+	//if err != nil {
+	//	return nil, fmt.Errorf("failed to send test message: %w", err)
+	//}
+	//logger.Info().Msg("✅ Kafka test message sent successfully to topic 'wb.raw.test'")
+	//_ = testWriter.Close()
+
+	return p, nil
+}
+
+// getWriter — возвращает writer для указанного топика (кеширует)
+func (p *KafkaPublisher) getWriter(topic string) *kafka.Writer {
+	if w, ok := p.writers[topic]; ok {
+		return w
+	}
 	w := &kafka.Writer{
-		Addr:         kafka.TCP(cfg.Kafka.Brokers...),
+		Addr:         kafka.TCP(p.brokers...),
 		Topic:        topic,
 		Balancer:     &kafka.LeastBytes{},
 		RequiredAcks: kafka.RequireOne,
 		Async:        false,
-		WriteTimeout: 10 * time.Second,
+		BatchSize:    10,                     // до 10 сообщений в пачке
+		BatchTimeout: 500 * time.Millisecond, // минимальная задержка
 	}
-
-	// Отправим тестовое сообщение
-	testMsg := kafka.Message{Value: []byte(`{"status":"ok","message":"Kafka test message"}`)}
-	err = w.WriteMessages(context.Background(), testMsg)
-	if err != nil {
-		return nil, fmt.Errorf("failed to send test message to Kafka: %w", err)
-	}
-
-	logger.Info().Msg("✅ Kafka test message sent successfully")
-
-	return &KafkaPublisher{
-		writer: w,
-		logger: logger,
-		topic:  topic,
-	}, nil
+	p.writers[topic] = w
+	return w
 }
 
-func (p *KafkaPublisher) Publish(ctx context.Context, key []byte, v any) error {
+// Publish — универсальная публикация сообщения
+func (p *KafkaPublisher) Publish(ctx context.Context, topic string, key []byte, v any) error {
+	writer := p.getWriter(topic)
+
 	b, err := json.Marshal(v)
 	if err != nil {
-		return fmt.Errorf("failed to marshal message: %w", err)
+		p.logger.Error().Err(err).Msg("❌ failed to marshal message")
+		return err
 	}
 
 	msg := kafka.Message{
@@ -88,16 +117,22 @@ func (p *KafkaPublisher) Publish(ctx context.Context, key []byte, v any) error {
 		Time:  time.Now(),
 	}
 
-	if err := p.writer.WriteMessages(ctx, msg); err != nil {
-		p.logger.Error().Err(err).Msg("❌ failed to publish message")
+	if err := writer.WriteMessages(ctx, msg); err != nil {
+		p.logger.Error().Err(err).Msgf("❌ failed to publish to topic '%s'", topic)
 		return err
 	}
 
-	p.logger.Info().Msgf("✅ message published to topic '%s'", p.topic)
+	p.logger.Info().Msgf("✅ message published to topic '%s'", topic)
 	return nil
 }
 
+// Close — закрытие всех Kafka writer’ов
 func (p *KafkaPublisher) Close() error {
-	p.logger.Info().Msg("Closing Kafka writer...")
-	return p.writer.Close()
+	for topic, w := range p.writers {
+		p.logger.Info().Msgf("🛑 Closing Kafka writer for topic '%s'...", topic)
+		if err := w.Close(); err != nil {
+			p.logger.Error().Err(err).Msgf("failed to close writer for topic %s", topic)
+		}
+	}
+	return nil
 }
