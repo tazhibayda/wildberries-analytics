@@ -50,7 +50,7 @@ services:
       context: .
     environment:
       - WB_TOKEN=${WB_TOKEN}
-      - WB_POLL_INTERVAL=5m
+      - WB_POLL_INTERVAL=1m
       - KAFKA_BROKERS=kafka:9092
       - KAFKA_TOPIC=wb.raw
       - LOG_LEVEL=debug

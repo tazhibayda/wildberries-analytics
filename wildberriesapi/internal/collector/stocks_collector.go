@@ -2,33 +2,28 @@ package collector
 
 import (
 	"context"
-	"encoding/json"
-	"fmt"
 	"time"
 )
 
-type Stock struct {
-	NmID            int       `json:"nm_id"`
-	SupplierArticle string    `json:"supplier_article"`
-	WarehouseName   string    `json:"warehouse_name"`
-	Quantity        int       `json:"quantity"`
-	LastChangeDate  time.Time `json:"last_change_date"`
-}
+func (c *Collector) CollectStocks(ctx context.Context) {
+	dateFrom := time.Now().Add(-24 * time.Hour).Format("2006-01-02T00:00:00")
 
-func (c *Collector) CollectStocks() error {
-	ctx := context.Background()
-	stocks, err := c.API.GetStocks(ctx, time.Now().Add(-24*time.Hour))
+	c.Logger.Info().Msgf("📊 Collecting WB stocks since %s", dateFrom)
+	data, err := c.API.GetStocks(ctx, dateFrom)
 	if err != nil {
-		c.Logger.Error().Err(err).Msg("failed to get stocks")
-		return err
+		c.Logger.Error().Err(err).Msg("❌ Failed to collect WB stocks")
+		return
 	}
 
-	for _, s := range stocks {
-		data, _ := json.Marshal(s)
-		if err := c.Publisher.Publish(ctx, "wb.raw.stocks", nil, data); err != nil {
-			c.Logger.Error().Err(err).Msg("failed to publish stock")
-		}
+	if len(data) == 0 {
+		c.Logger.Info().Msg("📊 No new WB stocks found")
+		return
 	}
-	c.Logger.Info().Msg(fmt.Sprintf("✅ published %d stocks", len(stocks)))
-	return nil
+
+	if err := c.Publisher.Publish(ctx, "wb.raw.stocks", []byte("stocks"), data); err != nil {
+		c.Logger.Error().Err(err).Msg("❌ Failed to publish WB stocks to Kafka")
+		return
+	}
+
+	c.Logger.Info().Msgf("✅ Published %d WB stocks to topic '%s'", len(data), "wb.raw.stocks")
 }

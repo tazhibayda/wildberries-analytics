@@ -36,3 +36,16 @@ Go:
 
 
 Это только пример использование wb api с kafka, ткпкрь нужно правильно обработать данных через ETL-service
+
+
+
+internal/api/
+├── client.go               ← WBClient struct + DoRequest() + retry logic
+├── endpoints.go            ← все URL WB API
+├── paid_storage.go         ← методы start/status/download
+├── prices.go               ← методы get_prices
+├── tariffs.go              ← методы get_tariffs
+├── adverts.go              ← методы для рекламных API
+├── reports.go              ← nm_report_history/detail и т.д.
+├── finance.go              ← финансы, возвраты, supplies
+└── search_texts.go         ← POST отчёт по запросам

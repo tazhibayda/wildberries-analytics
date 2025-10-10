@@ -1,10 +1,10 @@
 package config
 
 import (
+	"github.com/joho/godotenv"
+	"github.com/spf13/viper"
 	"strings"
 	"time"
-
-	"github.com/spf13/viper"
 )
 
 type KafkaConfig struct {
@@ -21,8 +21,9 @@ type Config struct {
 }
 
 func Load() Config {
+	_ = godotenv.Load()
+
 	v := viper.New()
-	v.SetEnvPrefix("WB")
 	v.AutomaticEnv()
 
 	v.SetDefault("POLL_INTERVAL", "30m")
@@ -43,7 +44,7 @@ func Load() Config {
 	}
 
 	return Config{
-		WBToken:      v.GetString("TOKEN"),
+		WBToken:      v.GetString("WB_TOKEN"),
 		PollInterval: poll,
 		Kafka: KafkaConfig{
 			Brokers: brokers,

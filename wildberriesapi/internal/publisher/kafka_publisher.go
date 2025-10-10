@@ -27,6 +27,43 @@ type KafkaPublisher struct {
 	brokers []string
 }
 
+// ensureTopicExists проверяет и создаёт топик, если его нет
+func ensureTopicExists(brokerAddr, topic string, logger zerolog.Logger) error {
+	conn, err := kafka.Dial("tcp", brokerAddr)
+	if err != nil {
+		return fmt.Errorf("failed to connect to broker %s: %w", brokerAddr, err)
+	}
+	defer conn.Close()
+
+	controller, err := conn.Controller()
+	if err != nil {
+		return fmt.Errorf("failed to get controller: %w", err)
+	}
+
+	controllerConn, err := kafka.Dial("tcp", fmt.Sprintf("%s:%d", controller.Host, controller.Port))
+	if err != nil {
+		return fmt.Errorf("failed to connect to controller: %w", err)
+	}
+	defer controllerConn.Close()
+
+	topicConfigs := []kafka.TopicConfig{
+		{
+			Topic:             topic,
+			NumPartitions:     1,
+			ReplicationFactor: 1,
+		},
+	}
+
+	err = controllerConn.CreateTopics(topicConfigs...)
+	if err != nil {
+		logger.Warn().Err(err).Msgf("⚠️ topic '%s' may already exist", topic)
+	} else {
+		logger.Info().Msgf("✅ topic '%s' created (if it didn't exist)", topic)
+	}
+
+	return nil
+}
+
 // NewKafkaPublisher — инициализация Kafka Publisher
 func NewKafkaPublisher(cfg config.Config) (Publisher, error) {
 	if len(cfg.Kafka.Brokers) == 0 {
@@ -48,6 +85,30 @@ func NewKafkaPublisher(cfg config.Config) (Publisher, error) {
 		return nil, fmt.Errorf("failed to get Kafka controller: %w", err)
 	}
 	logger.Info().Msgf("✅ Connected to Kafka controller at %s:%d", controller.Host, controller.Port)
+
+	// Проверяем и создаём необходимые топики
+	for _, t := range []string{
+		cfg.Kafka.Topic, // "wb.raw"
+		"wb.raw.sales",
+		"wb.raw.orders",
+		"wb.raw.stocks",
+		"wb.raw.prices",
+		"wb.raw.tariffs",
+		"wb.raw.adverts",
+		"wb.raw.searchtexts",
+		"wb.raw.analytics",
+		"wb.raw.finances",
+		"wb.raw.reviews",
+		"wb.raw.questions",
+		"wb.raw.answers",
+		"wb.raw.cancellations",
+		"wb.raw.finance.supplies",
+		"wb.raw.finance.returns",
+	} {
+		if err := ensureTopicExists(cfg.Kafka.Brokers[0], t, logger); err != nil {
+			logger.Error().Err(err).Msgf("failed to ensure topic %s", t)
+		}
+	}
 
 	p := &KafkaPublisher{
 		writers: make(map[string]*kafka.Writer),
@@ -121,7 +182,6 @@ func (p *KafkaPublisher) Publish(ctx context.Context, topic string, key []byte, 
 		p.logger.Error().Err(err).Msgf("❌ failed to publish to topic '%s'", topic)
 		return err
 	}
-
 	p.logger.Info().Msgf("✅ message published to topic '%s'", topic)
 	return nil
 }

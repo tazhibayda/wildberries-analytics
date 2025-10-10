@@ -2,37 +2,42 @@ package collector
 
 import (
 	"context"
-	"encoding/json"
-	"fmt"
 	"time"
+
+	"github.com/rs/zerolog"
+	"wildberriesapi/internal/api"
+	"wildberriesapi/internal/publisher"
 )
 
-type Order struct {
-	OrderID         int       `json:"order_id"`
-	NmID            int       `json:"nm_id"`
-	SupplierArticle string    `json:"supplier_article"`
-	TechSize        string    `json:"tech_size"`
-	WarehouseName   string    `json:"warehouse_name"`
-	TotalPrice      float64   `json:"total_price"`
-	DiscountPercent int       `json:"discount_percent"`
-	Date            time.Time `json:"date"`
-	LastChangeDate  time.Time `json:"last_change_date"`
+type OrdersCollector struct {
+	api     *api.WBClient
+	pub     publisher.Publisher
+	Logger  zerolog.Logger
+	topic   string
+	enabled bool
 }
 
-func (c *Collector) CollectOrders() error {
-	ctx := context.Background()
-	orders, err := c.API.GetOrders(ctx, (time.Now().Add(-1 * time.Hour)), time.Now())
+func (c *Collector) CollectOrders(ctx context.Context) {
+
+	dateFrom := time.Now().Add(-24 * time.Hour).Format("2006-01-02")
+	dateTo := time.Now().Format("2006-01-02")
+
+	c.Logger.Info().Msgf("📦 Collecting WB orders from %s to %s", dateFrom, dateTo)
+	data, err := c.API.GetOrders(ctx, dateFrom, dateTo)
 	if err != nil {
-		c.Logger.Error().Err(err).Msg("failed to get orders")
-		return err
+		c.Logger.Error().Err(err).Msg("❌ Failed to collect WB orders")
+		return
 	}
 
-	for _, o := range orders {
-		data, _ := json.Marshal(o)
-		if err := c.Publisher.Publish(ctx, "wb.raw.orders", nil, data); err != nil {
-			c.Logger.Error().Err(err).Msg("failed to publish order")
-		}
+	if len(data) == 0 {
+		c.Logger.Info().Msg("📦 No new WB orders found")
+		return
 	}
-	c.Logger.Info().Msg(fmt.Sprintf("✅ published %d tariffs", len(orders)))
-	return nil
+
+	if err := c.Publisher.Publish(ctx, "wb.raw.orders", []byte("orders"), data); err != nil {
+		c.Logger.Error().Err(err).Msg("❌ Failed to publish WB orders to Kafka")
+		return
+	}
+
+	c.Logger.Info().Msgf("✅ Published %d WB orders to topic '%s'", len(data), "wb.raw.orders")
 }

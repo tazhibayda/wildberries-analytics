@@ -2,36 +2,29 @@ package collector
 
 import (
 	"context"
-	"encoding/json"
-	"fmt"
 	"time"
 )
 
-type Sale struct {
-	NmID            int       `json:"nm_id"`
-	SupplierArticle string    `json:"supplier_article"`
-	Quantity        int       `json:"quantity"`
-	TotalPrice      float64   `json:"total_price"`
-	Date            time.Time `json:"date"`
-	LastChangeDate  time.Time `json:"last_change_date"`
-}
+func (c *Collector) CollectSales(ctx context.Context) {
 
-func (c *Collector) CollectSales() error {
-	ctx := context.Background()
+	dateFrom := time.Now().Add(-24 * time.Hour).Format("2006-01-02T00:00:00")
 
-	sales, err := c.API.GetSales(ctx, time.Now().Add(-24*time.Hour), time.Now())
+	c.Logger.Info().Msgf("💰 Collecting WB sales since %s", dateFrom)
+	data, err := c.API.GetSales(ctx, dateFrom)
 	if err != nil {
-		c.Logger.Error().Err(err).Msg("failed to get sales")
-		return err
+		c.Logger.Error().Err(err).Msg("❌ Failed to collect WB sales")
+		return
 	}
 
-	for _, s := range sales {
-		data, _ := json.Marshal(s)
-		if err := c.Publisher.Publish(ctx, "wb.raw.sales", nil, data); err != nil {
-			c.Logger.Error().Err(err).Msg("failed to publish sale: %v")
-		}
-		fmt.Println(data)
+	if len(data) == 0 {
+		c.Logger.Info().Msg("💰 No new WB sales found")
+		return
 	}
-	c.Logger.Info().Msg(fmt.Sprintf("✅ published %d sales", len(sales)))
-	return nil
+
+	if err := c.Publisher.Publish(ctx, "wb.raw.sales", []byte("sales"), data); err != nil {
+		c.Logger.Error().Err(err).Msg("❌ Failed to publish WB sales to Kafka")
+		return
+	}
+
+	c.Logger.Info().Msgf("✅ Published %d WB sales to topic '%s'", len(data), "wb.raw.sales")
 }
