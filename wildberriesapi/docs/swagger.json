@@ -407,7 +407,7 @@
                     {
                         "type": "string",
                         "description": "Дата (YYYY-MM-DD)",
-                        "name": "dateFrom",
+                        "name": "date",
                         "in": "query",
                         "required": true
                     }
@@ -455,7 +455,7 @@
                     {
                         "type": "string",
                         "description": "Дата (YYYY-MM-DD)",
-                        "name": "dateFrom",
+                        "name": "date",
                         "in": "query",
                         "required": true
                     }

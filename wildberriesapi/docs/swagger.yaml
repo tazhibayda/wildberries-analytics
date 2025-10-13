@@ -270,7 +270,7 @@ paths:
       parameters:
       - description: Дата (YYYY-MM-DD)
         in: query
-        name: dateFrom
+        name: date
         required: true
         type: string
       responses:
@@ -303,7 +303,7 @@ paths:
       parameters:
       - description: Дата (YYYY-MM-DD)
         in: query
-        name: dateFrom
+        name: date
         required: true
         type: string
       responses:

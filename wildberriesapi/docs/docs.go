@@ -410,7 +410,7 @@ const docTemplate = `{
                     {
                         "type": "string",
                         "description": "Дата (YYYY-MM-DD)",
-                        "name": "dateFrom",
+                        "name": "date",
                         "in": "query",
                         "required": true
                     }
@@ -458,7 +458,7 @@ const docTemplate = `{
                     {
                         "type": "string",
                         "description": "Дата (YYYY-MM-DD)",
-                        "name": "dateFrom",
+                        "name": "date",
                         "in": "query",
                         "required": true
                     }
@@ -508,6 +508,8 @@ var SwaggerInfo = &swag.Spec{
 	Description:      "This is the API documentation for the WB Analytics Collector Service.",
 	InfoInstanceName: "swagger",
 	SwaggerTemplate:  docTemplate,
+	LeftDelim:        "{{",
+	RightDelim:       "}}",
 }
 
 func init() {

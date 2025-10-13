@@ -34,7 +34,7 @@ func (h *Handler) GetTariffs(w http.ResponseWriter, r *http.Request) {
 // @Summary Получить Комиссия по категориям товаров из WB API
 // @Description Метод возвращает данные о комиссии WB по родительским категориям товаров согласно модели продаж.
 // @Tags Tariffs
-// @Param dateFrom query string true "Дата (YYYY-MM-DD)"
+// @Param date query string true "Дата (YYYY-MM-DD)"
 // @Success 200 {object} []map[string]interface{}
 // @Failure 400 {object} map[string]string
 // @Failure 500 {object} map[string]string
@@ -64,7 +64,7 @@ func (h *Handler) GetTariffsBox(w http.ResponseWriter, r *http.Request) {
 // @Summary Получить Комиссия по категориям товаров из WB API
 // @Description Метод возвращает данные о комиссии WB по родительским категориям товаров согласно модели продаж.
 // @Tags Tariffs
-// @Param dateFrom query string true "Дата (YYYY-MM-DD)"
+// @Param date query string true "Дата (YYYY-MM-DD)"
 // @Success 200 {object} []map[string]interface{}
 // @Failure 400 {object} map[string]string
 // @Failure 500 {object} map[string]string

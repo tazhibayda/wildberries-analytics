@@ -48,6 +48,8 @@ services:
   wildberriesapi:
     build:
       context: .
+    ports:
+      - "8000:8000"
     environment:
       - WB_TOKEN=${WB_TOKEN}
       - WB_POLL_INTERVAL=1m
