@@ -53,7 +53,7 @@ func (h *Handler) StartPaidStorage(w http.ResponseWriter, r *http.Request) {
 // @Success 200 {object} []map[string]interface{}
 // @Failure 400 {object} map[string]string
 // @Failure 500 {object} map[string]string
-// @Router /api/paid_storage/storage [get]
+// @Router /api/paid_storage/status [get]
 func (h *Handler) GetPaidStorageStatus(w http.ResponseWriter, r *http.Request) {
 	ctx, cancel := context.WithTimeout(r.Context(), 90*time.Second)
 	defer cancel()
