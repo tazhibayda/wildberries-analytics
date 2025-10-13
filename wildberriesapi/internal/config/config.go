@@ -14,6 +14,7 @@ type KafkaConfig struct {
 
 type Config struct {
 	WBToken      string
+	ServerPort   string
 	PollInterval time.Duration
 	Kafka        KafkaConfig
 	LogLevel     string
@@ -31,6 +32,7 @@ func Load() Config {
 	v.SetDefault("KAFKA_BROKERS", "kafka:9092")
 	v.SetDefault("LOG_LEVEL", "info")
 	v.SetDefault("HTTP_TIMEOUT", "30s")
+	v.SetDefault("SERVER_PORT", "8000")
 
 	poll, _ := time.ParseDuration(v.GetString("POLL_INTERVAL"))
 	httpTimeout, _ := time.ParseDuration(v.GetString("HTTP_TIMEOUT"))
@@ -45,6 +47,7 @@ func Load() Config {
 
 	return Config{
 		WBToken:      v.GetString("WB_TOKEN"),
+		ServerPort:   v.GetString("SERVER_PORT"),
 		PollInterval: poll,
 		Kafka: KafkaConfig{
 			Brokers: brokers,

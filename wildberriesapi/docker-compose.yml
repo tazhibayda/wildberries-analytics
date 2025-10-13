@@ -54,6 +54,7 @@ services:
       - KAFKA_BROKERS=kafka:9092
       - KAFKA_TOPIC=wb.raw
       - LOG_LEVEL=debug
+      - SERVER_PORT=8000
     depends_on:
       kafka:
         condition: service_healthy

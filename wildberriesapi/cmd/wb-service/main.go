@@ -33,7 +33,7 @@ func main() {
 
 	handler := handlers.NewRouter(wbClient, log)
 
-	err := http.ListenAndServe(":8080", handler)
+	err := http.ListenAndServe(":"+cfg.ServerPort, handler)
 	if err != nil {
 		return
 	}
