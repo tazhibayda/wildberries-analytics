@@ -508,8 +508,6 @@ var SwaggerInfo = &swag.Spec{
 	Description:      "This is the API documentation for the WB Analytics Collector Service.",
 	InfoInstanceName: "swagger",
 	SwaggerTemplate:  docTemplate,
-	LeftDelim:        "{{",
-	RightDelim:       "}}",
 }
 
 func init() {
