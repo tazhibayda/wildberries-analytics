@@ -1,0 +1,335 @@
+basePath: /
+info:
+  contact: {}
+  description: This is the API documentation for the WB Analytics Collector Service.
+  title: WB Analytics Collector Service API
+  version: "1.0"
+paths:
+  /api/incomes:
+    get:
+      description: Возвращает поставки за период
+      parameters:
+      - description: Дата начала (YYYY-MM-DD)
+        in: query
+        name: dateFrom
+        required: true
+        type: string
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              additionalProperties: true
+              type: object
+            type: array
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Получить поставки из WB API
+      tags:
+      - Incomes
+  /api/orders:
+    get:
+      description: Возвращает список заказов за указанный период
+      parameters:
+      - description: Дата начала (YYYY-MM-DD)
+        in: query
+        name: dateFrom
+        required: true
+        type: string
+      - description: Дата окончания (YYYY-MM-DD)
+        in: query
+        name: dateTo
+        type: string
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              additionalProperties: true
+              type: object
+            type: array
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Получить заказы из WB API
+      tags:
+      - Orders
+  /api/paid_storage/download:
+    get:
+      description: Метод возвращает отчёт о платном хранении по ID задания на генерацию.
+      parameters:
+      - description: Дата начала (YYYY-MM-DD)
+        in: query
+        name: dateFrom
+        required: true
+        type: string
+      - description: Дата окончания (YYYY-MM-DD)
+        in: query
+        name: dateTo
+        type: string
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              additionalProperties: true
+              type: object
+            type: array
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Получить отчёт из WB API
+      tags:
+      - Paid Storage
+  /api/paid_storage/start:
+    get:
+      description: Метод создаёт задание на генерацию отчёта о платном хранении.
+      parameters:
+      - description: Дата начала (YYYY-MM-DD)
+        in: query
+        name: dateFrom
+        required: true
+        type: string
+      - description: Дата окончания (YYYY-MM-DD)
+        in: query
+        name: dateTo
+        type: string
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              additionalProperties: true
+              type: object
+            type: array
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Создать отчёт из WB API
+      tags:
+      - Paid Storage
+  /api/paid_storage/storage:
+    get:
+      description: Возвращает статус задания на генерацию отчёта о платном хранении
+        заказов за указанный период
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              additionalProperties: true
+              type: object
+            type: array
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Проверить статус из WB API
+      tags:
+      - Paid Storage
+  /api/sales:
+    get:
+      description: Возвращает продажи за период
+      parameters:
+      - description: Дата начала (YYYY-MM-DD)
+        in: query
+        name: dateFrom
+        required: true
+        type: string
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              additionalProperties: true
+              type: object
+            type: array
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Получить продажи из WB API
+      tags:
+      - Sales
+  /api/stocks:
+    get:
+      description: Возвращает текущие остатки
+      parameters:
+      - description: Дата начала (YYYY-MM-DD)
+        in: query
+        name: dateFrom
+        required: true
+        type: string
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              additionalProperties: true
+              type: object
+            type: array
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Получить остатки из WB API
+      tags:
+      - Stocks
+  /api/tariffs:
+    get:
+      description: Метод возвращает данные о комиссии WB по родительским категориям
+        товаров согласно модели продаж.
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              additionalProperties: true
+              type: object
+            type: array
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Получить Комиссия по категориям товаров из WB API
+      tags:
+      - Tariffs
+  /api/tariffs/box:
+    get:
+      description: Метод возвращает данные о комиссии WB по родительским категориям
+        товаров согласно модели продаж.
+      parameters:
+      - description: Дата (YYYY-MM-DD)
+        in: query
+        name: date
+        required: true
+        type: string
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              additionalProperties: true
+              type: object
+            type: array
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Получить Комиссия по категориям товаров из WB API
+      tags:
+      - Tariffs
+  /api/tariffs/pallet:
+    get:
+      description: Метод возвращает данные о комиссии WB по родительским категориям
+        товаров согласно модели продаж.
+      parameters:
+      - description: Дата (YYYY-MM-DD)
+        in: query
+        name: date
+        required: true
+        type: string
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              additionalProperties: true
+              type: object
+            type: array
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Получить Комиссия по категориям товаров из WB API
+      tags:
+      - Tariffs
+schemes:
+- http
+- https
+swagger: "2.0"
